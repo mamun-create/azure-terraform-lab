@@ -1,4 +1,12 @@
+
 terraform {
+  backend "azurerm" {
+    resource_group_name  = "rg-tf-backend"
+    storage_account_name = "tflabstorage12345"
+    container_name       = "tfstate"
+    key                  = "terraform.tfstate"
+
+  }
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -70,7 +78,7 @@ resource "azurerm_network_interface" "nic" {
 
 resource "azurerm_windows_virtual_machine" "vm" {
   name                = "vm-terra-lab"
-  computer_name = "vmterra01"
+  computer_name       = "vmterra01"
   resource_group_name = azurerm_resource_group.rg.name
   location            = var.location
   size                = "Standard_B1s"
@@ -92,4 +100,24 @@ resource "azurerm_windows_virtual_machine" "vm" {
     sku       = "2019-Datacenter"
     version   = "latest"
   }
+}
+
+
+resource "azurerm_resource_group" "rg_backend" {
+  name     = "rg-tf-backend"
+  location = var.location
+}
+
+resource "azurerm_storage_account" "storage" {
+  name                     = "tflabstorage12345"
+  resource_group_name      = azurerm_resource_group.rg_backend.name
+  location                 = var.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
+resource "azurerm_storage_container" "container" {
+  name                  = "tfstate"
+  storage_account_id    = azurerm_storage_account.storage.id
+  container_access_type = "private"
 }
