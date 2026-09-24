@@ -1,4 +1,4 @@
-name: Terraform CI
+name: Terraform CI/CD
 
 on:
   push:
@@ -12,6 +12,10 @@ permissions:
 jobs:
   terraform:
     runs-on: ubuntu-latest
+    env:
+      TF_IN_AUTOMATION: true
+      TF_VAR_vm_admin_password: ${{ secrets.TF_VAR_VM_ADMIN_PASSWORD }}
+      TF_VAR_rdp_source_address_prefix: ${{ secrets.TF_VAR_RDP_SOURCE_ADDRESS_PREFIX }}
 
     steps:
       - name: Checkout code
@@ -21,10 +25,9 @@ jobs:
         uses: hashicorp/setup-terraform@v3
 
       - name: Azure Login
-        uses: azure/login@v1
+        uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
-
 
       - name: Terraform Init
         run: terraform init
@@ -39,4 +42,5 @@ jobs:
         run: terraform plan -no-color
 
       - name: Terraform Apply
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve
