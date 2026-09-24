@@ -1,12 +1,11 @@
-
 terraform {
   backend "azurerm" {
     resource_group_name  = "rg-tf-backend"
     storage_account_name = "tflabstorage12345"
     container_name       = "tfstate"
     key                  = "terraform.tfstate"
-
   }
+
   required_providers {
     azurerm = {
       source  = "hashicorp/azurerm"
@@ -23,6 +22,7 @@ resource "azurerm_resource_group" "rg" {
   name     = var.resource_group_name
   location = var.location
 }
+
 resource "azurerm_virtual_network" "vnet" {
   name                = "vnet-terraform-lab"
   address_space       = ["10.0.0.0/16"]
@@ -36,33 +36,37 @@ resource "azurerm_subnet" "subnet_frontend" {
   virtual_network_name = azurerm_virtual_network.vnet.name
   address_prefixes     = ["10.0.1.0/24"]
 }
+
 resource "azurerm_network_security_group" "nsg" {
   name                = "nsg-terraform-lab"
   location            = var.location
   resource_group_name = azurerm_resource_group.rg.name
 
   security_rule {
-    name                       = "Allow-RDP"
+    name                       = "Allow-RDP-From-Approved-Source"
     priority                   = 1000
     direction                  = "Inbound"
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
     destination_port_range     = "3389"
-    source_address_prefix      = "*"
+    source_address_prefix      = var.rdp_source_address_prefix
     destination_address_prefix = "*"
   }
 }
+
 resource "azurerm_subnet_network_security_group_association" "nsg_assoc" {
   subnet_id                 = azurerm_subnet.subnet_frontend.id
   network_security_group_id = azurerm_network_security_group.nsg.id
 }
+
 resource "azurerm_public_ip" "pip" {
   name                = "pip-terraform-lab"
   location            = var.location
   resource_group_name = azurerm_resource_group.rg.name
   allocation_method   = "Static"
 }
+
 resource "azurerm_network_interface" "nic" {
   name                = "nic-terraform-lab"
   location            = var.location
@@ -82,8 +86,8 @@ resource "azurerm_windows_virtual_machine" "vm" {
   resource_group_name = azurerm_resource_group.rg.name
   location            = var.location
   size                = "Standard_B1s"
-  admin_username      = "azureuser"
-  admin_password      = "Password1234!"
+  admin_username      = var.vm_admin_username
+  admin_password      = var.vm_admin_password
 
   network_interface_ids = [
     azurerm_network_interface.nic.id
@@ -101,7 +105,6 @@ resource "azurerm_windows_virtual_machine" "vm" {
     version   = "latest"
   }
 }
-
 
 resource "azurerm_resource_group" "rg_backend" {
   name     = "rg-tf-backend"
